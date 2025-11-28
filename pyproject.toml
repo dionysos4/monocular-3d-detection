@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "monocular3d"
+version = "0.1.0"
+description = "Monocular 3D Object Detection package"
+readme = "README.md"
+requires-python = ">=3.7"
+authors = [
+    { name="Your Name", email="you@example.com" }
+]
+license = { text="MIT" }
+dependencies = [
+    "numpy>=1.19.0",
+    "torch>=1.9.0",
+    "torchvision>=0.10.0",
+    "opencv-python>=4.5.0",
+    "scikit-learn>=0.24.0",
+    "scipy>=1.7.0",
+    "matplotlib>=3.3.0",
+    "jupyter>=1.0.0",
+    "ipykernel>=6.0.0"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["monocular3d*"]
