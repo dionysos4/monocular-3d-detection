@@ -136,9 +136,8 @@ class MonoDetection:
         lower_edge_points = self.geometry.get_edge_endpoints(self.ransac_lower_edges)
         
         # Step 6: Reconstruct 3D geometry
-        rec_mat, mulvec = self.geometry.compute_reconstruction_matrices(self.K, self.T_cam_plane)
         lower_edge_3d_points = self.geometry.reconstruct_3d_edge_points(
-            lower_edge_points, rec_mat, mulvec
+            lower_edge_points, self.K, self.T_cam_plane
         )
         lower_3d_points = self.geometry.get_corresponding_3d_point(
             self.lower_edges, self.upper_points, lower_edge_3d_points

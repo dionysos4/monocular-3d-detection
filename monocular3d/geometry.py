@@ -117,66 +117,37 @@ class GeometryProcessor:
         return np.array(edge_points)
     
 
-    def compute_reconstruction_matrices(self, K: np.ndarray, T_cam_plane: np.ndarray) -> Tuple:
-        """
-        Compute reconstruction matrices for 3D point calculation.
-        
-        Args:
-            K: Camera intrinsic matrix (3, 3)
-            T_cam_plane: Transformation from plane to camera (4, 4)
-            
-        Returns:
-            Tuple of (rec_mat, mulvec) for reconstruction
-        """
-        R_cam_plane = T_cam_plane[:3, :3]
-        t_cam_plane = T_cam_plane[:3, 3]
-        P = K @ R_cam_plane
-        
-        # Plane equation coefficients: ax + by + cz + d = 0
-        # For horizontal plane: y = 0 -> 0x - 1y + 0z + 0 = 0
-        a, b, c, d = 0, -1, 0, 0
-        
-        rec_mat = np.zeros((4, 4))
-        rec_mat[:3, :3] = P
-        rec_mat[3, :3] = np.array([a, b, c])
-        rec_mat[3, 3] = d
-        
-        mulvec = np.zeros(4)
-        mulvec[:3] = -K @ t_cam_plane
-        mulvec[3] = -d
-        
-        return rec_mat, mulvec
-    
-
     def reconstruct_3d_edge_points(self, edge_points_2d: np.ndarray, 
-                                   rec_mat: np.ndarray, mulvec: np.ndarray) -> np.ndarray:
+                                   K: np.ndarray, T_cam_plane: np.ndarray) -> np.ndarray:
         """
         Reconstruct 3D points from 2D edge endpoints.
         
         Args:
             edge_points_2d: 2D edge endpoints (N, 4) with (x_start, y_start, x_end, y_end)
-            rec_mat: Reconstruction matrix (4, 4)
-            mulvec: Multiplication vector (4,)
+            K: Camera intrinsic matrix (3, 3)
+            T_cam_plane: Transformation from plane to camera (4, 4)
             
         Returns:
             3D points of shape (N, 2, 4) with homogeneous coordinates
         """
         points_3d = []
-        rec_mat = rec_mat.copy()  # Don't modify original
-        
+        # set homography
+        P = np.zeros((3,3))
+        P[:,0] = T_cam_plane[:3,0] # r1
+        P[:,1] = T_cam_plane[:3,2] # r3
+        P[:,2] = T_cam_plane[:3,3] # t
+        H = K @ P
+
         for edge_points in edge_points_2d:
-            # Reconstruct start point
-            rec_mat[0, 3] = -edge_points[0]
-            rec_mat[1, 3] = -edge_points[1]
-            rec_mat[2, 3] = -1
-            p0 = np.linalg.inv(rec_mat) @ mulvec
-            p0[-1] = 1
-            
-            # Reconstruct end point
-            rec_mat[0, 3] = -edge_points[2]
-            rec_mat[1, 3] = -edge_points[3]
-            p1 = np.linalg.inv(rec_mat) @ mulvec
-            p1[-1] = 1
+            p0_img = np.array([edge_points[0], edge_points[1], 1])
+            p0 = np.linalg.inv(H) @ p0_img
+            p0 = p0 / p0[2]
+            p0 = np.array([p0[0], 0, p0[1], 1])  # y value is 0 on the plane
+                          
+            p1_img = np.array([edge_points[2], edge_points[3], 1])
+            p1 = np.linalg.inv(H) @ p1_img
+            p1 = p1 / p1[2]
+            p1 = np.array([p1[0], 0, p1[1], 1])  # y value is 0 on the plane
             
             points_3d.append((p0, p1))
         
