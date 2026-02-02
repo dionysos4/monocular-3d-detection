@@ -171,7 +171,7 @@ class GeometryProcessor:
         mid_3d_points = []
         for lower_edge, upper_point, edge_3d in zip(lower_edges, upper_points, lower_edge_3d_points):
             idx_in_edge = np.where(lower_edge[:, 0] == upper_point[0])[0]
-            t = idx_in_edge / len(lower_edge)
+            t = idx_in_edge / (len(lower_edge) - 1)
             mid_3d_point = edge_3d[0] + t * (edge_3d[1] - edge_3d[0])
             mid_3d_points.append(mid_3d_point)
         return np.array(mid_3d_points)
@@ -181,37 +181,37 @@ class GeometryProcessor:
                               upper_points: np.ndarray,
                               K: np.ndarray, T_cam_plane: np.ndarray) -> np.ndarray:
         """
-        Compute object heights from upper and lower points.
-        
+        Computes heights of upper points based on lower 3D points and image coordinates.
+
         Args:
-            lower_3d_points: 3D points at object base (N, 4)
-            upper_points: 2D upper points in image (N, 2)
-            K: Camera intrinsic matrix (3, 3)
-            T_cam_plane: Transformation matrix (4, 4)
-            
+            lower_3d_points: (N, 4) - Homogeneous 3D points at object base in plane coordinates
+            upper_points: (N, 2) - 2D pixel coordinates of upper points in image
+            K: (3, 3) - Camera intrinsic matrix
+            T_cam_plane: (4, 4) - Transformation from plane to camera
+        
         Returns:
-            Object heights (N,)
+            heights: (N,) - Computed heights y of upper points
         """
+        R = T_cam_plane[:3, :3]
+        t = T_cam_plane[:3, 3]
+
+        fx = K[0, 0]
+        fy = K[1, 1]
+        cx = K[0, 2]
+        cy = K[1, 2]
+
         heights = []
-        T_plane_cam = np.linalg.inv(T_cam_plane)
-        camera_height = T_plane_cam[1, 3]
-        
-        for upper_point, mid_3d_point in zip(upper_points, lower_3d_points):
-            # Convert upper point to plane coordinates
-            point_img_hom = np.array([
-                upper_point[0] - K[0, 2],
-                upper_point[1] - K[1, 2],
-                K[0, 0], 1
-            ])
-            point_plane_hom = T_plane_cam @ point_img_hom
-            
-            # Compute height using trigonometry
-            alpha = np.arctan(
-                (camera_height - point_plane_hom[1]) / 
-                np.sqrt(point_plane_hom[0]**2 + point_plane_hom[2]**2)
-            )
-            object_distance = np.linalg.norm(mid_3d_point[:3])
-            height = np.tan(alpha) * object_distance - camera_height
-            heights.append(height)
-        
+        for P_lower, (u, v) in zip(lower_3d_points, upper_points):
+            X0, _, Z0, _ = P_lower
+
+            r11, r12, r13 = R[0]
+            r21, r22, r23 = R[1]
+            r31, r32, r33 = R[2]
+            tx, ty, tz = t
+
+            numerator = fy * (r21 * X0 + r23 * Z0 + ty) - (v - cy) * (r31 * X0 + r33 * Z0 + tz)
+            denominator = (v - cy) * r32 - fy * r22
+            Y = numerator / denominator
+            heights.append(abs(Y))
+
         return np.array(heights)
