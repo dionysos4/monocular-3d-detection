@@ -150,7 +150,7 @@ class MonoDetection:
         
         # Step 8: Construct 3D bounding boxes
         self.bbox_parameters = self.bbox_processor.compute_bbox_parameters(
-            lower_edge_3d_points, heights, object_depth=fixed_depth
+            lower_edge_3d_points, heights, object_scores=scores_filt.numpy(), object_depth=fixed_depth
         )
         
         return self.bbox_parameters

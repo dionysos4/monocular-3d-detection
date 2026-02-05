@@ -14,6 +14,7 @@ class BBoxProcessor:
     
     def compute_bbox_parameters(self, lower_edge_3d_points: np.ndarray,
                                object_heights: np.ndarray,
+                               object_scores: np.ndarray,
                                object_depth: float = 3.0) -> List[Dict]:
         """
         Compute 3D bounding box parameters.
@@ -21,6 +22,7 @@ class BBoxProcessor:
         Args:
             lower_edge_3d_points: 3D edge points (N, 2, 4)
             object_heights: Object heights (N,)
+            object_scores: Detection scores (N,)
             object_depth: Fixed depth for all objects
             
         Returns:
@@ -28,7 +30,7 @@ class BBoxProcessor:
         """
         bbox_parameters = []
         
-        for edge_points, height in zip(lower_edge_3d_points, object_heights):
+        for edge_points, height, score in zip(lower_edge_3d_points, object_heights, object_scores):
             p0 = edge_points[0]
             p1 = edge_points[1]
             
@@ -75,7 +77,8 @@ class BBoxProcessor:
                 "length": o_length,
                 "height": o_height,
                 "width": o_width,
-                "yaw": yaw
+                "yaw": yaw,
+                "score": score
             }
             bbox_parameters.append(bbox_dict)
         
