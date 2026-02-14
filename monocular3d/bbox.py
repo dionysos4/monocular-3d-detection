@@ -37,6 +37,9 @@ class BBoxProcessor:
             # Ensure consistent ordering
             if p0[0] > p1[0]:
                 p0, p1 = p1, p0
+
+            original_p0 = p0.copy()
+            original_p1 = p1.copy()
             
             # Compute orthogonal direction for depth
             normalized_vector = (p1[:3] - p0[:3]) / np.linalg.norm(p1[:3] - p0[:3])
@@ -63,12 +66,9 @@ class BBoxProcessor:
             o_width = object_depth
             o_height = height
             
-            # Compute yaw angle
-            p2_c = p2 - center
-            p3_c = p3 - center
-            x_rot = p2_c - p3_c
-            x_rot = x_rot / np.linalg.norm(x_rot)
-            yaw = np.arctan2(x_rot[2], x_rot[0])
+            # Compute yaw angle always with the extracted edge
+            edge_vector = original_p0 - original_p1
+            yaw = np.arctan2(edge_vector[0], edge_vector[2])
             
             bbox_dict = {
                 "x": center[0],
@@ -111,7 +111,7 @@ class BBoxProcessor:
                 [np.cos(yaw), 0, np.sin(yaw)],
                 [0, 1, 0],
                 [-np.sin(yaw), 0, np.cos(yaw)]
-            ]).T
+            ])
             
             # 8 corner points in local coordinate system
             # Bottom face (y=0), then top face (y=-height)
